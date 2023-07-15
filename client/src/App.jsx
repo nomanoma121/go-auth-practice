@@ -4,6 +4,7 @@ import "./App.css";
 import { BACKEND_ENDPOINT } from "./constants";
 import { PostForm } from "./components/PostForm";
 import { PostList } from "./components/PostList";
+import { LoginForm } from "./components/LoginForm";
 
 function App() {
   const [posts, setPosts] = useState([]);
@@ -53,7 +54,11 @@ function App() {
     <main className="app-container">
       <h1>匿名掲示板（仮アプリ）</h1>
       {/* ログイン済みの場合はPostFormを表示 */}
-      {user && <PostForm addPost={(post) => setPosts([post, ...posts])} />}
+      {user ? (
+        <PostForm addPost={(post) => setPosts([post, ...posts])} />
+      ) : (
+        <LoginForm setUser={setUser} />
+      )}
       <PostList posts={posts} />
     </main>
   );

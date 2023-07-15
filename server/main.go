@@ -291,7 +291,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	// リクエストボディの読み込み
 	var user User
 	if err := decodeBody(r, &user); err != nil {
-		respondJSON(w, http.StatusBadRequest, err.Error())
+		respondJSON(w, http.StatusBadRequest, map[string]string{"message": "不正なリクエストです"})
 		return
 	}
 
@@ -300,13 +300,13 @@ func login(w http.ResponseWriter, r *http.Request) {
 	var u User
 	err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Password, &u.CreatedAt)
 	if err != nil {
-		respondJSON(w, http.StatusBadRequest, err.Error())
+		respondJSON(w, http.StatusBadRequest, map[string]string{"message": "メールアドレスまたはパスワードが間違っています"})
 		return
 	}
 
 	// パスワードの照合
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(user.Password)); err != nil {
-		respondJSON(w, http.StatusBadRequest, err.Error())
+		respondJSON(w, http.StatusBadRequest, map[string]string{"message": "メールアドレスまたはパスワードが間違っています"})
 		return
 	}
 
@@ -322,7 +322,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	// 署名を設定する
 	tokenString, err := token.SignedString(secret)
 	if err != nil {
-		respondJSON(w, http.StatusBadRequest, err.Error())
+		respondJSON(w, http.StatusBadRequest, map[string]string{"message": "不正なリクエストです"})
 		return
 	}
 
