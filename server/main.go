@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
+	"os"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -48,6 +50,9 @@ const (
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`
+
+	// ユーザーの作成を行うSQL文
+	insertUser = "INSERT INTO users (name, email, password, created_at) VALUES (?, ?, ?, ?)"
 )
 
 // Userは、ユーザーを表す構造体
@@ -101,6 +106,16 @@ func main() {
 			getPosts(w, r, db)
 		case http.MethodPost:
 			createPost(w, r, db)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	}))
+
+	// ルーティングの設定
+	http.HandleFunc("/api/users", HandleCORS(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			createUser(w, r, db)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -168,6 +183,46 @@ func createPost(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	// 作成した投稿をJSON形式でレスポンスする
 	respondJSON(w, http.StatusCreated, post)
+}
+
+// ユーザーを作成する
+// POST /api/users
+func createUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	// リクエストボディの読み込み
+	var user User
+	if err := decodeBody(r, &user); err != nil {
+		respondJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	now := time.Now()
+
+	// Passwordをハッシュ化する
+	// ハッシュ化操作は不可逆性があるため、一度ハッシュ化したパスワードは元に戻せない
+	// そのため、ハッシュ化したパスワードをデータベースに保存すると、データベースからデータが漏洩したりしても元のパスワードを知ることができないようになる
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+
+	// ユーザーの作成
+	result, err := db.Exec(insertUser, user.Name, string(hashedPassword), now)
+	if err != nil {
+		panic(err)
+	}
+
+	// 作成したユーザーのIDを取得する
+	id, err := result.LastInsertId()
+	if err != nil {
+		panic(err)
+	}
+	user.ID = int(id)
+	// goのtimeでは、YYYY-MM-DD hh:mm:ssの形式でフォーマットするには、以下のようにする
+	user.CreatedAt = now.Format("2006-01-02 15:04:05")
+	user.Password = "" // パスワードはレスポンスに含めない
+
+	// 作成したユーザーをJSON形式でレスポンスする
+	respondJSON(w, http.StatusCreated, user)
 }
 
 // decodeBodyは、リクエストボディを構造体に変換する
