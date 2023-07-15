@@ -3,6 +3,7 @@ import "./App.css";
 
 import { BACKEND_ENDPOINT } from "./constants";
 import { PostForm } from "./components/PostForm";
+import { PostList } from "./components/PostList";
 
 function App() {
   const [posts, setPosts] = useState([]);
@@ -27,17 +28,7 @@ function App() {
     <main className="app-container">
       <h1>匿名掲示板（仮アプリ）</h1>
       <PostForm addPost={(post) => setPosts([post, ...posts])} />
-      <h2>投稿一覧</h2>
-      <div className="post-list">
-        {posts.map((post) => (
-          <div key={post.id} className="post-list__item">
-            <span className="post-list__item__content">{post.content}</span>
-            <span className="post-list__item__date">
-              {new Date(post.created_at).toLocaleString("ja-JP")}
-            </span>
-          </div>
-        ))}
-      </div>
+      <PostList posts={posts} />
     </main>
   );
 }
