@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -51,7 +53,7 @@ const (
 		CREATE TABLE IF NOT EXISTS users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT,
-			email TEXT,
+			email TEXT UNIQUE,
 			password TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
@@ -75,6 +77,12 @@ type User struct {
 
 // init関数は、main関数よりも先に実行される特殊な関数
 func init() {
+	// .envファイルの読み込み
+	err := godotenv.Load()
+	if err != nil {
+		panic(err)
+	}
+
 	// secretの取得と設定
 	secretRaw := os.Getenv("SECRET")
 	if secretRaw == "" {
@@ -82,7 +90,6 @@ func init() {
 	}
 	secret = []byte(secretRaw)
 
-	var err error
 	// データベースとの接続
 	db, err = sql.Open("sqlite3", dbFileName)
 	if err != nil {
@@ -234,7 +241,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ユーザーの作成
-	result, err := db.Exec(insertUser, user.Name, string(hashedPassword), now)
+	result, err := db.Exec(insertUser, user.Name, user.Email, string(hashedPassword), now)
 	if err != nil {
 		panic(err)
 	}
@@ -249,8 +256,27 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	user.CreatedAt = now.Format("2006-01-02 15:04:05")
 	user.Password = "" // パスワードはレスポンスに含めない
 
-	// 作成したユーザーをJSON形式でレスポンスする
-	respondJSON(w, http.StatusCreated, user)
+	// JWTの作成
+	claims := jwt.MapClaims{
+		"user_id": user.ID,
+		"exp":     time.Now().Add(time.Hour * 72).Unix(), // 72時間が有効期限
+	}
+
+	// ヘッダーとペイロードを結合した文字列を作成する
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// 署名を設定する
+	tokenString, err := token.SignedString(secret)
+	if err != nil {
+		respondJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// 作成したユーザーとJWTをJSON形式でレスポンスする
+	respondJSON(w, http.StatusCreated, map[string]interface{}{
+		"token": tokenString,
+		"user":  user,
+	})
 }
 
 // ログインする
@@ -352,11 +378,21 @@ type AuthCtxKey string
 func HandleAuthRequire(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Authorizationヘッダーからトークンを取得する
-		tokenString := r.Header.Get("Authorization")
-		if tokenString == "" {
+		authorizationHeader := r.Header.Get("Authorization")
+		if authorizationHeader == "" {
 			respondJSON(w, http.StatusUnauthorized, "no token")
 			return
 		}
+
+		// Bearerトークンを取得する
+		bearerToken := strings.Split(authorizationHeader, " ")
+		if len(bearerToken) != 2 {
+			respondJSON(w, http.StatusUnauthorized, "invalid token")
+			return
+		}
+
+		// トークン文字列を取得する
+		tokenString := bearerToken[1]
 
 		// トークンを検証する
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
