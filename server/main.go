@@ -139,15 +139,6 @@ func main() {
 		}
 	}))
 
-	// ルーティングの設定
-	http.HandleFunc("/api/users", HandleCORS(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPost:
-			createUser(w, r)
-		default:
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	}))
 
 	// ルーティングの設定
 	http.HandleFunc("/api/me", HandleCORS(HandleAuthRequire(getMe)))
@@ -157,6 +148,16 @@ func main() {
 		switch r.Method {
 		case http.MethodPost:
 			login(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	}))
+
+	// ルーティングの設定
+	http.HandleFunc("/register", HandleCORS(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			register(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -227,8 +228,8 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 }
 
 // ユーザーを作成する
-// POST /api/users
-func createUser(w http.ResponseWriter, r *http.Request) {
+// POST /register
+func register(w http.ResponseWriter, r *http.Request) {
 	// リクエストボディの読み込み
 	var user User
 	if err := decodeBody(r, &user); err != nil {
