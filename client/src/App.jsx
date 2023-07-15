@@ -57,7 +57,12 @@ function App() {
       <h1>匿名掲示板（仮アプリ）</h1>
       {/* ログイン済みの場合はPostFormを表示 */}
       {user ? (
-        <PostForm addPost={(post) => setPosts([post, ...posts])} />
+        <>
+          <p>
+            ログイン中のユーザー: {user.name} ({user.email})
+          </p>
+          <PostForm addPost={(post) => setPosts([post, ...posts])} />
+        </>
       ) : (
         <>
           {/* ログインしていない場合はLoginFormを表示 */}
