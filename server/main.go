@@ -10,12 +10,10 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const (
-	// データベースのファイル名
-	dbFileName = "db.sqlite3"
+const dbFileName = "db.sqlite3"
 
-	// Postテーブルの作成を行うSQL文
-	// IF NOT EXISTSをつけることで、既にテーブルが存在していた場合は作成しない
+// PostテーブルのSQLまとめ
+const (
 	createPostTable = `
 		CREATE TABLE IF NOT EXISTS posts (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,6 +36,29 @@ type Post struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// UserテーブルのSQLまとめ
+const (
+	// Userテーブルの作成を行うSQL文
+	createUserTable = `
+		CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT,
+			email TEXT,
+			password TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`
+)
+
+// Userは、ユーザーを表す構造体
+type User struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	CreatedAt string `json:"created_at"`
+}
+
 // init関数は、main関数よりも先に実行される特殊な関数
 func init() {
 	// データベースとの接続
@@ -49,8 +70,14 @@ func init() {
 	// データベースの接続を閉じる(init()が終了したら閉じる)
 	defer db.Close()
 
-	// テーブルの作成
+	// Postテーブルの作成
 	_, err = db.Exec(createPostTable)
+	if err != nil {
+		panic(err)
+	}
+
+	// Userテーブルの作成
+	_, err = db.Exec(createUserTable)
 	if err != nil {
 		panic(err)
 	}
