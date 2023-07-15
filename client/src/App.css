@@ -68,20 +68,20 @@
   color: #999;
 }
 
-.login-form {
+.auth-form {
   display: flex;
   gap: 1rem;
   width: 100%;
 }
 
-.login-form__input {
+.auth-form__input {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 0.25rem;
 }
 
-.login-form__submit-button {
+.auth-form__submit-button {
   white-space: nowrap;
   padding: 0.5rem;
   border: none;
@@ -91,7 +91,16 @@
   cursor: pointer;
 }
 
-.login-form__error {
+.auth-form__error {
   color: red;
   font-size: 0.75rem;
+}
+
+.register-or-login-button {
+  margin-top: 1rem;
+  padding: 0.5rem;
+  border: none;
+  color: #77b6f5;
+  background-color: transparent;
+  cursor: pointer;
 }

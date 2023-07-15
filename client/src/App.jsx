@@ -5,10 +5,12 @@ import { BACKEND_ENDPOINT } from "./constants";
 import { PostForm } from "./components/PostForm";
 import { PostList } from "./components/PostList";
 import { LoginForm } from "./components/LoginForm";
+import { RegisterForm } from "./components/RegisterForm";
 
 function App() {
   const [posts, setPosts] = useState([]);
   const [user, setUser] = useState(null);
+  const [isRegister, setIsRegister] = useState(true); // 新規登録かログインかを切り替えるためのステート
 
   // APIから投稿データを取得する関数
   const getPosts = async () => {
@@ -57,7 +59,20 @@ function App() {
       {user ? (
         <PostForm addPost={(post) => setPosts([post, ...posts])} />
       ) : (
-        <LoginForm setUser={setUser} />
+        <>
+          {/* ログインしていない場合はLoginFormを表示 */}
+          {isRegister ? (
+            <RegisterForm setUser={setUser} />
+          ) : (
+            <LoginForm setUser={setUser} />
+          )}
+          <button
+            onClick={() => setIsRegister(!isRegister)}
+            className="register-or-login-button"
+          >
+            {isRegister ? "ログイン" : "新規登録"}
+          </button>
+        </>
       )}
       <PostList posts={posts} />
     </main>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { BACKEND_ENDPOINT } from "../constants";
 
-export function LoginForm({
+export function RegisterForm({
   // 親コンポーネントからログインユーザー情報をセットするための関数を受け取る
   setUser,
 }) {
@@ -12,23 +12,25 @@ export function LoginForm({
     // ページ遷移を防ぐ（デフォルトでは、フォーム送信ボタンを押すとページが遷移してしまう）
     e.preventDefault();
     // フォームの内容を取得
+    const name = e.target.elements.name.value;
     const email = e.target.elements.email.value;
     const password = e.target.elements.password.value;
     // 投稿を作成
-    login(email, password);
+    register(name, email, password);
     // フォームを空にする
     e.target.reset();
   };
 
   // 投稿を作成する関数
-  const login = async (email, password) => {
+  const register = async (name, email, password) => {
     // APIに送るデータを作成
     const payload = {
       email: email,
       password: password,
+      name: name,
     };
     // APIにデータを送信
-    const res = await fetch(`${BACKEND_ENDPOINT}/login`, {
+    const res = await fetch(`${BACKEND_ENDPOINT}/register`, {
       // POSTメソッドで送信
       method: "POST",
       headers: {
@@ -55,8 +57,14 @@ export function LoginForm({
 
   return (
     <>
-      <h2>ログイン</h2>
+      <h2>ユーザー登録</h2>
       <form onSubmit={handleSubmit} className="auth-form">
+        <input
+          name="name"
+          className="auth-form__input"
+          type="text"
+          placeholder="ユーザー名"
+        />
         <input
           name="email"
           className="auth-form__input"
@@ -70,7 +78,7 @@ export function LoginForm({
           placeholder="パスワード"
         />
         <button type="submit" className="auth-form__submit-button">
-          ログイン
+          登録
         </button>
       </form>
       {error && <p className="auth-form__error">{error}</p>}

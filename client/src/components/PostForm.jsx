@@ -23,6 +23,8 @@ export function PostForm({
     const payload = {
       content: text,
     };
+    // Tokenを取得
+    const token = localStorage.getItem("token");
     // APIにデータを送信
     const res = await fetch(`${BACKEND_ENDPOINT}/api/posts`, {
       // POSTメソッドで送信
@@ -30,6 +32,8 @@ export function PostForm({
       headers: {
         // JSON形式でデータを送ることを指定
         "Content-Type": "application/json",
+        // AuthorizationヘッダーにTokenをセット
+        Authorization: `Bearer ${token}`,
       },
       // JSON.stringifyでJSON文字列に変換
       // (文字列じゃないと送れないので、オブジェクトをJSON文字列に変換しています)
