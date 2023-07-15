@@ -4,15 +4,19 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/crypto/bcrypt"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 const dbFileName = "db.sqlite3"
+
+var secret []byte
 
 // PostテーブルのSQLまとめ
 const (
@@ -53,6 +57,9 @@ const (
 
 	// ユーザーの作成を行うSQL文
 	insertUser = "INSERT INTO users (name, email, password, created_at) VALUES (?, ?, ?, ?)"
+
+	// ユーザーの取得を行うSQL文
+	selectUserByEmail = "SELECT * FROM users WHERE email = ?"
 )
 
 // Userは、ユーザーを表す構造体
@@ -66,6 +73,13 @@ type User struct {
 
 // init関数は、main関数よりも先に実行される特殊な関数
 func init() {
+	// secretの取得と設定
+	secretRaw := os.Getenv("SECRET")
+	if secretRaw == "" {
+		panic("SECRETが設定されていません、環境変数を設定してください")
+	}
+	secret = []byte(secretRaw)
+
 	// データベースとの接続
 	db, err := sql.Open("sqlite3", dbFileName)
 	if err != nil {
@@ -116,6 +130,16 @@ func main() {
 		switch r.Method {
 		case http.MethodPost:
 			createUser(w, r, db)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	}))
+
+	// ルーティングの設定
+	http.HandleFunc("/login", HandleCORS(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			login(w, r, db)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -223,6 +247,53 @@ func createUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	// 作成したユーザーをJSON形式でレスポンスする
 	respondJSON(w, http.StatusCreated, user)
+}
+
+// ログインする
+// POST /api/login
+func login(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	// リクエストボディの読み込み
+	var user User
+	if err := decodeBody(r, &user); err != nil {
+		respondJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// ユーザーの取得
+	row := db.QueryRow(selectUserByEmail, user.Email)
+	var u User
+	err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Password, &u.CreatedAt)
+	if err != nil {
+		respondJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// パスワードの照合
+	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(user.Password)); err != nil {
+		respondJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// JWTの作成
+	claims := jwt.MapClaims{
+		"user_id": u.ID,
+		"exp":     time.Now().Add(time.Hour * 72).Unix(), // 72時間が有効期限
+	}
+
+	// ヘッダーとペイロードを結合した文字列を作成する
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// 署名を設定する
+	tokenString, err := token.SignedString(secret)
+	if err != nil {
+		respondJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// トークンをレスポンスする
+	respondJSON(w, http.StatusOK, map[string]string{
+		"token": tokenString,
+	})
 }
 
 // decodeBodyは、リクエストボディを構造体に変換する
