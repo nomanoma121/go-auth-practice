@@ -62,8 +62,11 @@ const (
 	// ユーザーの作成を行うSQL文
 	insertUser = "INSERT INTO users (name, email, password, created_at) VALUES (?, ?, ?, ?)"
 
-	// ユーザーの取得を行うSQL文
+	// ユーザーの取得を行うSQL文 (メールアドレスで取得)
 	selectUserByEmail = "SELECT * FROM users WHERE email = ?"
+
+	// ユーザーの取得を行うSQL文 (IDで取得)
+	selectUserByID = "SELECT * FROM users WHERE id = ?"
 )
 
 // Userは、ユーザーを表す構造体
@@ -145,6 +148,9 @@ func main() {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	}))
+
+	// ルーティングの設定
+	http.HandleFunc("/api/me", HandleCORS(HandleAuthRequire(getMe)))
 
 	// ルーティングの設定
 	http.HandleFunc("/login", HandleCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -324,6 +330,28 @@ func login(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]string{
 		"token": tokenString,
 	})
+}
+
+// AccessTokenからログイン中のユーザーを取得して返す
+// GET /api/me
+func getMe(w http.ResponseWriter, r *http.Request) {
+	// コンテキストからUserIDを取得する
+	userID := r.Context().Value(AuthCtxKey("user_id")).(int)
+
+	// ユーザーの取得
+	row := db.QueryRow(selectUserByID, userID)
+	var user User
+	err := row.Scan(&user.ID, &user.Name, &user.Email, &user.Password, &user.CreatedAt)
+	if err != nil {
+		respondJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// パスワードはレスポンスに含めない
+	user.Password = ""
+
+	// ユーザーをレスポンスする
+	respondJSON(w, http.StatusOK, user)
 }
 
 // decodeBodyは、リクエストボディを構造体に変換する
