@@ -244,19 +244,21 @@ func register(w http.ResponseWriter, r *http.Request) {
 	// そのため、ハッシュ化したパスワードをデータベースに保存すると、データベースからデータが漏洩したりしても元のパスワードを知ることができないようになる
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		panic(err)
+		respondJSON(w, http.StatusInternalServerError, map[string]string{"message": "Internal Server Error"})
+		return
 	}
 
 	// ユーザーの作成
 	result, err := db.Exec(insertUser, user.Name, user.Email, string(hashedPassword), now)
 	if err != nil {
-		panic(err)
+		respondJSON(w, http.StatusInternalServerError, map[string]string{"message": "そのメールアドレスは既に登録されています"})
+		return
 	}
 
 	// 作成したユーザーのIDを取得する
 	id, err := result.LastInsertId()
 	if err != nil {
-		panic(err)
+		respondJSON(w, http.StatusInternalServerError, map[string]string{"message": "Internal Server Error"})
 	}
 	user.ID = int(id)
 	// goのtimeでは、YYYY-MM-DD hh:mm:ssの形式でフォーマットするには、以下のようにする
@@ -275,7 +277,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 	// 署名を設定する
 	tokenString, err := token.SignedString(secret)
 	if err != nil {
-		respondJSON(w, http.StatusBadRequest, err.Error())
+		respondJSON(w, http.StatusBadRequest, map[string]string{"message": "Internal Server Error"})
 		return
 	}
 
