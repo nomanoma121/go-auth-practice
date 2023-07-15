@@ -326,9 +326,12 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	u.Password = "" // パスワードはレスポンスに含めない
+
 	// トークンをレスポンスする
-	respondJSON(w, http.StatusOK, map[string]string{
+	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"token": tokenString,
+		"user":  u,
 	})
 }
 
@@ -384,7 +387,7 @@ func HandleCORS(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// レスポンスヘッダーの設定
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 		// リクエストヘッダーの設定
 		if r.Method == http.MethodOptions {
