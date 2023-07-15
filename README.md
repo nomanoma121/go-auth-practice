@@ -1,6 +1,24 @@
-# Go React Simple Template
+# Go React Auth Template
 
-GoとReactで、簡単なWebアプリを作るためのテンプレートです。
+GoとReactで、認証つきWebアプリを作るためのテンプレートです。
+
+JWTを使った認証を実装しています。
+
+## 初期設定
+
+JWTの署名のため、SECRETという環境変数を設定する必要があります。
+
+```sh
+echo "SECRET=$(openssl rand -base64 32)" > ./server/.env
+```
+
+これでランダムな文字列がSECRETという環境変数に設定されます。
+
+手動で設定する場合は、`./server/.env`に以下のように書いてください。
+
+```sh
+SECRET=ひみつの文字列
+```
 
 ## フォルダ構成
 
