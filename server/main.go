@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 const dbFileName = "db.sqlite3"
 
 var secret []byte
+var db *sql.DB
 
 // PostテーブルのSQLまとめ
 const (
@@ -80,8 +82,9 @@ func init() {
 	}
 	secret = []byte(secretRaw)
 
+	var err error
 	// データベースとの接続
-	db, err := sql.Open("sqlite3", dbFileName)
+	db, err = sql.Open("sqlite3", dbFileName)
 	if err != nil {
 		panic(err) // もし接続に失敗したら、プログラムを強制終了する
 	}
@@ -104,8 +107,9 @@ func init() {
 
 // main関数は、プログラムのエントリーポイント、init()関数の実行後に実行される
 func main() {
+	var err error
 	// データベースとの接続
-	db, err := sql.Open("sqlite3", dbFileName)
+	db, err = sql.Open("sqlite3", dbFileName)
 	if err != nil {
 		panic(err) // もし接続に失敗したら、プログラムを強制終了する
 	}
@@ -117,9 +121,9 @@ func main() {
 	http.HandleFunc("/api/posts", HandleCORS(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			getPosts(w, r, db)
+			getPosts(w, r)
 		case http.MethodPost:
-			createPost(w, r, db)
+			createPost(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -129,7 +133,7 @@ func main() {
 	http.HandleFunc("/api/users", HandleCORS(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			createUser(w, r, db)
+			createUser(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -139,7 +143,7 @@ func main() {
 	http.HandleFunc("/login", HandleCORS(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			login(w, r, db)
+			login(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -152,7 +156,7 @@ func main() {
 
 // 投稿の一覧を取得する
 // GET /api/posts
-func getPosts(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func getPosts(w http.ResponseWriter, r *http.Request) {
 	// 投稿の取得
 	rows, err := db.Query(selectPosts)
 	if err != nil {
@@ -179,7 +183,7 @@ func getPosts(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 // 投稿を作成する
 // POST /api/posts
-func createPost(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func createPost(w http.ResponseWriter, r *http.Request) {
 	// リクエストボディの読み込み
 	var post Post
 	if err := decodeBody(r, &post); err != nil {
@@ -211,7 +215,7 @@ func createPost(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 // ユーザーを作成する
 // POST /api/users
-func createUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func createUser(w http.ResponseWriter, r *http.Request) {
 	// リクエストボディの読み込み
 	var user User
 	if err := decodeBody(r, &user); err != nil {
@@ -251,7 +255,7 @@ func createUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 // ログインする
 // POST /api/login
-func login(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func login(w http.ResponseWriter, r *http.Request) {
 	// リクエストボディの読み込み
 	var user User
 	if err := decodeBody(r, &user); err != nil {
