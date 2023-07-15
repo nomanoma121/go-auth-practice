@@ -123,7 +123,7 @@ func main() {
 		case http.MethodGet:
 			getPosts(w, r)
 		case http.MethodPost:
-			createPost(w, r)
+			HandleAuthRequire(createPost)(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -340,5 +340,49 @@ func HandleCORS(h http.HandlerFunc) http.HandlerFunc {
 
 		// ハンドラーの実行
 		h(w, r)
+	}
+}
+
+// UserIDをコンテキストに設定するためのkeyの型
+// 【触るのは非推奨】
+type AuthCtxKey string
+
+// ログインが必要なハンドラー
+// 【触るのは非推奨】
+func HandleAuthRequire(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Authorizationヘッダーからトークンを取得する
+		tokenString := r.Header.Get("Authorization")
+		if tokenString == "" {
+			respondJSON(w, http.StatusUnauthorized, "no token")
+			return
+		}
+
+		// トークンを検証する
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return secret, nil
+		})
+		if err != nil {
+			respondJSON(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		// トークンのペイロードからユーザーIDを取得する
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			respondJSON(w, http.StatusUnauthorized, "invalid token")
+			return
+		}
+		userID, ok := claims["user_id"].(float64)
+		if !ok {
+			respondJSON(w, http.StatusUnauthorized, "invalid token")
+			return
+		}
+
+		// ユーザーIDをコンテキストに設定する
+		ctx := context.WithValue(r.Context(), AuthCtxKey("user_id"), int(userID))
+
+		// ハンドラーの実行
+		h(w, r.WithContext(ctx))
 	}
 }
