@@ -27,6 +27,7 @@ const (
 	createPostTable = `
 		CREATE TABLE IF NOT EXISTS posts (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER,
 			content TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
@@ -134,6 +135,8 @@ func main() {
 			getPosts(w, r)
 		case http.MethodPost:
 			HandleAuthRequire(createPost)(w, r)
+		case http.MethodDelete:
+			HandleAuthRequire(deletePost)(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
@@ -225,6 +228,28 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 
 	// 作成した投稿をJSON形式でレスポンスする
 	respondJSON(w, http.StatusCreated, post)
+}
+
+type DeleteRequest struct {
+	ID int `json:"id"`
+}
+
+func deletePost(w http.ResponseWriter, r *http.Request) {
+	// リクエストボディの読み込み
+	var post Post
+	if err := decodeBody(r, &post); err != nil {
+		respondJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// 投稿の削除
+	_, err := db.Exec("DELETE FROM posts WHERE id = ?", post.ID)
+	if err != nil {
+		panic(err)
+	}
+
+	// 削除した投稿をJSON形式でレスポンスする
+	respondJSON(w, http.StatusOK, post)
 }
 
 // ユーザーを作成する
